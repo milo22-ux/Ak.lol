@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Customizable Bio Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            text-align: center;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .links a {
+            display: block;
+            text-decoration: none;
+            color: #007bff;
+            margin: 10px 0;
+        }
+        .upload-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .upload-section input {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Welcome to My Bio Page</h1>
+    </header>
+
+
+    <div class="container">
+        <h2>About Me</h2>
+        <textarea id="bio" placeholder="Write something about yourself..."></textarea>
+
+
+        <h2>Social Links</h2>
+        <input id="social-link" type="text" placeholder="Enter your social media link">
+        <button onclick="addLink()">Add Link</button>
+        <div class="links" id="links"></div>
+
+
+        <h2>File Upload</h2>
+        <div class="upload-section">
+            <input type="file" id="fileUpload">
+            <button onclick="uploadFile()">Upload</button>
+            <p id="uploadMessage"></p>
+        </div>
+    </div>
+
+
+    <script>
+        const linksContainer = document.getElementById('links');
+
+
+        // Add social link
+        function addLink() {
+            const linkInput = document.getElementById('social-link').value;
+            if (linkInput) {
+                const linkElement = document.createElement('a');
+                linkElement.href = linkInput;
+                linkElement.textContent = linkInput;
+                linkElement.target = '_blank';
+                linksContainer.appendChild(linkElement);
+                document.getElementById('social-link').value = '';
+            } else {
+                alert('Please enter a valid link!');
+            }
+        }
+
+
+        // Simulate file upload
+        function uploadFile() {
+            const fileInput = document.getElementById('fileUpload');
+            if (fileInput.files.length > 0) {
+                document.getElementById('uploadMessage').textContent = `File "${fileInput.files[0].name}" uploaded successfully!`;
+            } else {
+                alert('Please select a file to upload!');
+            }
+        }
+    </script>
+</body>
+</html>
