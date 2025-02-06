@@ -34,40 +34,48 @@ end
 
 -- / Dragging
 local drag = function(obj, latency)
-    obj = obj
-    latency = latency or 0.06
+    latency = latency or 0.06  -- Default latency for the dragging motion if not provided
 
-    toggled = nil
-    input = nil
-    start = nil
+    local toggled = false
+    local input = nil
+    local start = nil
+    local startPos = nil
 
-    function updateInput(input)
-        local Delta = input.Position - start
-        local Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + Delta.X, startPos.Y.Scale, startPos.Y.Offset + Delta.Y)
-        TweenService:Create(obj, TweenInfo.new(latency), {Position = Position}):Play()
+    -- This function will update the position of the object during dragging
+    local function updateInput(input)
+        local delta = input.Position - start
+        local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        
+        -- Create a tween for smooth movement
+        TweenService:Create(obj, TweenInfo.new(latency), {Position = position}):Play()
     end
 
+    -- Listen for the start of a mouse input (MouseButton1 - left click)
     obj.InputBegan:Connect(function(inp)
-        if (inp.UserInputType == Enum.UserInputType.MouseButton1) then
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
             toggled = true
             start = inp.Position
             startPos = obj.Position
+
+            -- When the mouse is released, stop dragging
             inp.Changed:Connect(function()
-                if (inp.UserInputState == Enum.UserInputState.End) then
+                if inp.UserInputState == Enum.UserInputState.End then
                     toggled = false
                 end
             end)
         end
     end)
 
+    -- Capture mouse movement while dragging
     obj.InputChanged:Connect(function(inp)
-        if (inp.UserInputType == Enum.UserInputType.MouseMovement) then
+        if inp.UserInputType == Enum.UserInputType.MouseMovement then
             input = inp
         end
     end)
 
+    -- Update the position of the object while dragging
     UserInputService.InputChanged:Connect(function(inp)
-        if (inp == input and toggled) then
+        if inp == input and toggled then
             updateInput(inp)
         end
     end)
