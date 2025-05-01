@@ -87,7 +87,7 @@ TextButton.MouseButton1Click:Connect(function()
 	if KeyTextbox.Text == key then
 		TextButton.Text = "Correct Key!"
 		task.wait(3)
-		loadstring(game:HttpGet("https://github.com/milo22-ux/Ak.lol/new/main",true))()
+		loadstring(game:HttpGet("https://github.com/milo22-ux/Ak.lol/blob/main/Template%20(1).txt",true))()
 		ScreenGui:Destroy()
 	else
 		TextButton.Text = "Wrong Key!"
