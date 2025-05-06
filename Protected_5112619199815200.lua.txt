@@ -51,6 +51,7 @@ end)
 local tab = DrRayLibrary.newTab("Visuals", "ImageIdHere")
 -- Esp
 tab.newButton("Esp", "", function()
+modules.Player3 = debug.getupvalue(v, 14)
 wait(0.1)
 repeat
     wait(0.1)
