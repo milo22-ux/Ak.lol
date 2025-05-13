@@ -1,1 +1,23 @@
+local validHWIDs = {
+    "a46b732a-1f71-4f7a-bf12-f5cf0626bda7",
+    "hwid_2",
+    "hwid_3"
+}
 
+local function isValid(hwid)
+    for _, validHwid in ipairs(validHWIDs) do
+        if hwid == validHwid then
+            return true
+        end
+    end
+    return false
+end
+
+local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+
+if isValid(hwid) then
+    print("Authorized")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/milo22-ux/Pls-donate/refs/heads/main/Paid",true))()
+else
+    warn("Not Valid HWID")
+end
