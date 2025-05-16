@@ -1,30 +1,160 @@
-local modules = { ["Camera"] = {}, ["Player"] = {}, ["Character"] = {}, ["Inventory"] = {}, ["RangedWeapon"] = {}, ["BowSpecial"] = {}, ["FPS"] = {}, ["NetWork"] = {}, ["ClimbingPick"] = {}, ["BuildingTool"] = {}, ["Consumable"] = {}, ["Melee"] = {}, ["MiningDrill"] = {}, ["PlaceEntity"] = {}, ["PortableAnvil"] = {}, ["PortableWorkbench"] = {}, ["InputManager"] = {}, ["Particle"] = {}, ["Settings"] = {}, ["Sound"] = {}, ["UI"] = {}, }
-for _, v in pairs(getgc(true)) do if typeof(v) == "function" and islclosure(v) then local info = debug.getinfo(v) local name = string.match(info.short_src, "%.([%w_]+)$") if name and modules[name] and info.name ~= nil then modules[name][info.name] = info.func end end end
-local workspace,camera = cloneref(game:GetService("Workspace")), workspace.CurrentCamera
-local UIS, RS, ReplicatedStorage = cloneref(game:GetService("UserInputService")), cloneref(game:GetService("RunService")), cloneref(game:GetService("ReplicatedStorage"))
-local Fov, Sline = Drawing.new("Circle"), Drawing.new("Line")
+local modules = {
+    ["Camera"] = {},
+    ["Player"] = {},
+    ["Character"] = {},
+    ["Inventory"] = {},
+    ["RangedWeapon"] = {},
+    ["BowSpecial"] = {},
+    ["FPS"] = {},
+    ["NetWork"] = {},
+    ["ClimbingPick"] = {},
+    ["BuildingTool"] = {},
+    ["Consumable"] = {},
+    ["Melee"] = {},
+    ["MiningDrill"] = {},
+    ["PlaceEntity"] = {},
+    ["PortableAnvil"] = {},
+    ["PortableWorkbench"] = {},
+    ["InputManager"] = {},
+    ["Particle"] = {},
+    ["Settings"] = {},
+    ["Sound"] = {},
+    ["UI"] = {},
+}
+
+for _, v in pairs(getgc(true)) do
+    if typeof(v) == "function" and islclosure(v) then
+        local info = debug.getinfo(v)
+        local name = string.match(info.short_src, "%.([%w_]+)$")
+        if name and modules[name] and info.name ~= nil then
+            modules[name][info.name] = info.func
+        end
+    end
+end
+
+local workspace = cloneref(game:GetService("Workspace"))
+local camera = workspace.CurrentCamera
+local UIS = cloneref(game:GetService("UserInputService"))
+local RS = cloneref(game:GetService("RunService"))
+local ReplicatedStorage = cloneref(game:GetService("ReplicatedStorage"))
+
+local Fov = Drawing.new("Circle")
+local Sline = Drawing.new("Line")
+
 local screenSize = camera.ViewportSize
 local screenCenter = Vector2.new(screenSize.X / 2, screenSize.Y / 2)
-Fov.Position = screenCenter Fov.Radius = 150 Fov.Color = Color3.fromRGB(255, 0, 255) Fov.Visible = true Sline.Color = Color3.fromRGB(255, 255, 255) Sline.Thickness = 1 Sline.Visible = true Sline.ZIndex = 1
-local getclosest = function() local closestModel, closestData = nil, nil local closestMagnitude = math.huge local camera = workspace.CurrentCamera for _, v in pairs(debug.getupvalue(modules.Player.GetPlayerModel, 1) or {}) do if v.model:FindFirstChild("Head") and not v.sleeping then local pos, onScreen = camera:WorldToViewportPoint(v.model:GetPivot().Position) if onScreen then local magnitude = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude local playerDistance = (workspace.Ignore.LocalCharacter.Middle:GetPivot().Position - v.model:GetPivot().Position).Magnitude if magnitude < Fov.Radius and playerDistance <= 9999 and magnitude < closestMagnitude then closestMagnitude = magnitude closestModel = v.model closestData = v end end end end return closestModel, closestData end
-game:GetService("RunService").RenderStepped:Connect(function() getgenv().SilentTarget = getclosest() if getgenv().SilentTarget and getgenv().SilentTarget:FindFirstChild("Head") then local head_pos = getgenv().SilentTarget.Head.Position local screenPos, onScreen = camera:WorldToViewportPoint(head_pos) if onScreen then Sline.From = screenCenter Sline.To = Vector2.new(screenPos.X, screenPos.Y) Sline.Visible = true else Sline.Visible = false end else Sline.Visible = false end end)
-local RunService, UserInputService, hue, speed = game:GetService("RunService"), game:GetService("UserInputService"), 0, 0.7 RunService.RenderStepped:Connect(function(dt) hue = (hue + (dt * speed * 100)) % 360 Fov.Color = Color3.fromHSV(hue / 360, 1, 1) end)  
-local ProjectileDrop = function() local mod = modules.FPS.GetEquippedItem() if not mod or not mod.id then return 0, 0 end local itemConfig = require(game:GetService("ReplicatedStorage").ItemConfigs[mod.id]) return mod.id, itemConfig.ProjectileSpeed, itemConfig.ProjectileDrop end
-local predict = function(p, e, s, d) local dt = (e - p).Magnitude local x = (math.pi * 2 - math.pi / 4) / 8 local t = dt / s local py = e.Y + (x * d * t) return Vector3.new(e.X, py, e.Z) end
-local SilentAim = true
-local oldfromOrientation; oldfromOrientation = hookfunction(CFrame.fromOrientation, newcclosure(function(p, y, r)
-    if SilentAim and getgenv().SilentTarget and debug.info(3, "n") == "fire" then
-        local id, speed, drop = ProjectileDrop()
-        local targetHead = getgenv().SilentTarget.Head
-        if targetHead then
-            local origin = modules.Camera.GetCFrame()
-            local Camera = game.workspace.CurrentCamera
-            local cameraPosition = Camera.CFrame.Position
-            local predictedPos = predict(origin.Position, targetHead.Position, speed, drop)
-            if predictedPos then
-                return Camera.CFrame:Inverse() * CFrame.lookAt(cameraPosition, predictedPos)
+
+Fov.Position = screenCenter
+Fov.Radius = 150
+Fov.Color = Color3.fromRGB(255, 0, 255)
+Fov.Visible = true
+
+Sline.Color = Color3.fromRGB(255, 255, 255)
+Sline.Thickness = 1
+Sline.Visible = true
+Sline.ZIndex = 1
+
+local getclosest = function()
+    local closestModel, closestData = nil, nil
+    local closestMagnitude = math.huge
+    local camera = workspace.CurrentCamera
+
+    for _, v in pairs(debug.getupvalue(modules.Player.GetPlayerModel, 1) or {}) do
+        if v.model:FindFirstChild("Head") and not v.sleeping then
+            local pos, onScreen = camera:WorldToViewportPoint(v.model:GetPivot().Position)
+            if onScreen then
+                local magnitude = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
+                local playerDistance = (workspace.Ignore.LocalCharacter.Middle:GetPivot().Position - v.model:GetPivot().Position).Magnitude
+
+                if magnitude < Fov.Radius and playerDistance <= 9999 and magnitude < closestMagnitude then
+                    closestMagnitude = magnitude
+                    closestModel = v.model
+                    closestData = v
+                end
             end
         end
     end
+
+    return closestModel, closestData
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    getgenv().SilentTarget = getclosest()
+    if getgenv().SilentTarget and getgenv().SilentTarget:FindFirstChild("Head") then
+        local head_pos = getgenv().SilentTarget.Head.Position
+        local screenPos, onScreen = camera:WorldToViewportPoint(head_pos)
+
+        if onScreen then
+            Sline.From = screenCenter
+            Sline.To = Vector2.new(screenPos.X, screenPos.Y)
+            Sline.Visible = true
+        else
+            Sline.Visible = false
+        end
+    else
+        Sline.Visible = false
+    end
+end)
+
+local hue, speed = 0, 0.7
+RS.RenderStepped:Connect(function(dt)
+    hue = (hue + (dt * speed * 100)) % 360
+    Fov.Color = Color3.fromHSV(hue / 360, 1, 1)
+end)
+
+local function predict()
+    local prediction = Vector3.new(0,0,0)
+    local drop = Vector3.new(0,0,0)
+    local player, playertable = getclosest()
+    if player and playertable then
+        local modules = getrenv()._G.modules
+        if modules.FPS and modules.FPS.GetEquippedItem() and modules.FPS.GetEquippedItem().id then
+            local ps = nil
+            local pd = nil
+            local weapon = modules.FPS.GetEquippedItem().id
+            local itemconfigs = require(game:GetService("ReplicatedStorage").ItemConfigs[weapon])
+            for i,v in pairs(itemconfigs) do
+                if i == "ProjectileSpeed" or i == "ProjectileDrop" then
+                   ps = itemconfigs.ProjectileSpeed
+                   pd = itemconfigs.ProjectileDrop
+                end
+            end
+            if ps and pd and weapon ~= nil then
+                local velocity = playertable.velocityVector
+                local distance = (workspace.Ignore.LocalCharacter.Middle.Position - player.Head.Position).Magnitude
+
+                if weapon == "PumpShotgun" then pd = 0.1 end
+                if ps == 0 then ps = 500 end
+
+                local tth = distance / ps
+                local mth = ps * tth * ps ^ 2
+                tth = tth + (distance / mth)
+
+                local dropresult = pd ^ (tth * pd) - 1
+                prediction = (velocity * (distance / ps*9)) * .65
+
+                drop = Vector3.new(0, math.max(0, dropresult), 0)
+                prediction = prediction + drop
+            end
+        end
+    end
+    return prediction,drop
+end
+
+local SilentAim = true
+local oldfromOrientation
+oldfromOrientation = hookfunction(CFrame.fromOrientation, newcclosure(function(p, y, r)
+    if SilentAim and getgenv().SilentTarget and debug.info(3, "n") == "fire" then
+        local origin = modules.Camera.GetCFrame()
+        local Camera = game.workspace.CurrentCamera
+        local cameraPosition = Camera.CFrame.Position
+        local predictedPos = getgenv().SilentTarget.Head.Position + predict()
+
+        if predictedPos then
+            print(predictedPos)
+            return Camera.CFrame:Inverse() * CFrame.lookAt(cameraPosition, predictedPos)
+        end
+    end
+
     return oldfromOrientation(p, y, r)
 end))
