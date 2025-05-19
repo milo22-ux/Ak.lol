@@ -151,7 +151,6 @@ oldfromOrientation = hookfunction(CFrame.fromOrientation, newcclosure(function(p
         local predictedPos = getgenv().SilentTarget.Head.Position + predict()
 
         if predictedPos then
-            print(predictedPos)
             return Camera.CFrame:Inverse() * CFrame.lookAt(cameraPosition, predictedPos)
         end
     end
