@@ -1,3 +1,26 @@
+local locked_env = {}
+
+locked_env.string_find = string.find
+locked_env.string_lower = string.lower
+locked_env.string_sub = string.sub
+locked_env.string_match = string.match
+locked_env.type = type
+locked_env.pcall = pcall
+locked_env.tostring = tostring
+locked_env.tonumber = tonumber
+locked_env.select = select
+locked_env.os_time = os.time
+locked_env.table_insert = table.insert
+locked_env.table_remove = table.remove
+locked_env.table_concat = table.concat
+locked_env.loadstring = loadstring or load
+locked_env.request = request or http_request or (http and http.request) or (syn and syn.request)
+locked_env.game_HttpGet = game and game.HttpGet or nil
+
+if locked_env.type(locked_env.request) ~= "function" then
+	error("Secure request unavailable")
+end
+
 local key = getgenv().key or ""
 local hwid = gethwid()
 
