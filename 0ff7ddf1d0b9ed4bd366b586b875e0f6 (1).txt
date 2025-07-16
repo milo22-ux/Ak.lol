@@ -1,44 +1,106 @@
-local locked_env = {}
+if _G.__anti_hook_ran then return end
+_G.__anti_hook_ran = true
 
-locked_env.string_find = string.find
-locked_env.string_lower = string.lower
-locked_env.string_sub = string.sub
-locked_env.string_match = string.match
-locked_env.type = type
-locked_env.pcall = pcall
-locked_env.tostring = tostring
-locked_env.tonumber = tonumber
-locked_env.select = select
-locked_env.os_time = os.time
-locked_env.table_insert = table.insert
-locked_env.table_remove = table.remove
-locked_env.table_concat = table.concat
-locked_env.loadstring = loadstring or load
-locked_env.request = request or http_request or (http and http.request) or (syn and syn.request)
-locked_env.game_HttpGet = game and game.HttpGet or nil
-
-if locked_env.type(locked_env.request) ~= "function" then
-	error("Secure request unavailable")
-end
-
-local suspicious_globals = {
-    "hookfunction", "getrawmetatable",
-    "setreadonly", "is_synapse_function", "iscclosure",
-    "islclosure", "checkcaller", "getnamecallmethod"
-}
-
-for _, name in ipairs(suspicious_globals) do
-    if rawget(_G, name) then
-        error("Exploit API detected: " .. name)
+(function()
+    local suspicious = {
+        "hookfunction", "getrawmetatable", "setreadonly", "setupvalue",
+        "getupvalue", "replaceclosure", "iscclosure", "islclosure",
+        "getgc", "getreg", "checkcaller"
+    }
+    for _, n in ipairs(suspicious) do
+        if rawget(_G, n) then error("⚠️ Exploit API detected: "..n) end
     end
-end
+
+    local isc = iscclosure
+    local function isnative(f) return type(f) == "function" and isc and isc(f) end
+    local critical = {pcall, tostring, error, print, setmetatable, getmetatable, pairs, ipairs}
+    for _, f in ipairs(critical) do
+        if not isnative(f) then error("⚠️ Core function hook detected") end
+    end
+
+    local mt = getrawmetatable(game)
+    if mt then
+        local nc = newcclosure
+        local old = mt.__namecall
+        setreadonly(mt, false)
+        mt.__namecall = nc(function(...) return old(...) end)
+        setreadonly(mt, true)
+    end
+
+    if not islclosure(game.HttpGet) or getfenv(game.HttpGet) ~= _G then
+        error("⚠️ game.HttpGet hook/env tampering")
+    end
+
+    local info = debug.getinfo
+    local function checkinfo(f, src)
+        local i = info(f)
+        if not i or (i.what ~= "C" and not (i.source or ""):find(src)) then
+            error("⚠️ Function identity mismatch")
+        end
+    end
+    checkinfo(pcall, "[C]") checkinfo(tostring, "[C]")
+
+    local tb = debug.traceback()
+    if tb and (tb:find("hook") or tb:find("inject")) then error("⚠️ Suspicious call stack") end
+
+    local mem_before = collectgarbage("count")
+    task.wait(1)
+    local mem_after = collectgarbage("count")
+    if math.abs(mem_after - mem_before) > 100 then error("⚠️ Suspicious memory spike") end
+
+    if getgc then
+        for _, v in ipairs(getgc(true)) do
+            if type(v) == "function" then
+                local i = debug.getinfo(v)
+                if i and i.short_src and i.short_src:lower():find("inject") then
+                    error("⚠️ Injected function in GC")
+                end
+            end
+        end
+    end
+
+    local expected = {
+        tostring = tostring, tonumber = tonumber, pairs = pairs,
+        next = next, type = type, select = select
+    }
+    for k,v in pairs(expected) do
+        if _G[k] ~= v then error("⚠️ Global tampered: "..k) end
+    end
+
+    for _, o in ipairs({game, workspace}) do
+        local mt = getmetatable(o)
+        if mt and type(mt) ~= "table" then error("⚠️ Invalid metatable for "..tostring(o)) end
+    end
+  
+    local known = {
+        pcall=true, type=true, tostring=true, print=true, game=true, workspace=true,
+        wait=true, require=true, getfenv=true, setfenv=true, tick=true,
+        os=true, math=true, string=true, table=true, debug=true
+    }
+    for k,v in pairs(getgenv()) do
+        if type(v) == "function" and not known[k] then
+            error("⚠️ Unknown global function: "..tostring(k))
+        end
+    end
+
+    print("✅ Anti-hook checks complete")
+end)()
+
+local locked_env = {
+    string_find = string.find, string_lower = string.lower, string_sub = string.sub,
+    string_match = string.match, type = type, pcall = pcall, tostring = tostring,
+    tonumber = tonumber, select = select, os_time = os.time,
+    table_insert = table.insert, table_remove = table.remove, table_concat = table.concat,
+    loadstring = loadstring or load,
+    request = request or http_request or (http and http.request) or (syn and syn.request),
+    game_HttpGet = game and game.HttpGet or nil
+}
+if type(locked_env.request) ~= "function" then error("Secure request unavailable") end
 
 local t0 = os.clock()
 for _ = 1, 1e6 do end
 local t1 = os.clock()
-if (t1 - t0) > 0.5 then
-    error("Execution slowdown detected")
-end
+if (t1 - t0) > 0.5 then error("Execution slowdown detected") end
 
 local key = getgenv().key or ""
 local hwid = gethwid()
@@ -48,35 +110,38 @@ if type(request) ~= "function" then error("Request function missing") end
 if key == "" then error("Key not set") end
 if not hwid or hwid == "" then error("HWID missing") end
 
-local isValidResponse = function(body)
-    local b = tostring(body):lower()
-    return b:find("ok") or b:find("valid")
+local function(body)
+    return (function(b) return b:find("ok") or b:find("valid") end)(tostring(body):lower())
 end
 
-local getServerResponse = function(extra)
+local function(extra)
     local t = os.time()
     local url = ("http://whitelist-ivp4.vercel.app/api/vaildate?key=%s&hwid=%s&t=%s%s"):format(key, hwid, t, extra or "")
     local success, response = pcall(function()
-        return request({ Url = url, Method = "GET" })
+        return request({Url = url, Method = "GET"})
     end)
-    if not success or not response or not response.Body then
-        error("Failed server request")
-    end
+    if not success or not response or not response.Body then error("Failed server request") end
     return tostring(response.Body)
 end
 
-local runChecks = function()
+(function()
     local responses = {}
-    for i = 1, 10 do
+    for i=1,10 do
         local param = (i % 3 == 0 and "&check=3") or (i % 2 == 0 and "&check=2") or ("&chk=" .. i)
         if i == 7 then param = "&keyrev=" .. key:reverse() end
-        responses[i] = getServerResponse(param)
-        local valid = isValidResponse(responses[i])
-        if not valid then
-            error("Whitelist failed on check " .. i .. ": " .. responses[i])
+        responses[i] = (function()
+            local t = os.time()
+            local url = ("http://whitelist-ivp4.vercel.app/api/vaildate?key=%s&hwid=%s&t=%s%s"):format(key, hwid, t, param)
+            local s, r = pcall(function() return request({Url = url, Method = "GET"}) end)
+            if not s or not r or not r.Body then error("Failed server request") end
+            return tostring(r.Body)
+        end)()
+        local b = tostring(responses[i]):lower()
+        if not (b:find("ok") or b:find("valid")) then
+            error("Whitelist failed on check "..i..": "..responses[i])
         end
     end
-    for i = 2, #responses do
+    for i=2,#responses do
         if responses[i] ~= responses[1] then error("Inconsistent server responses") end
     end
     if #key < 5 or #hwid < 5 then error("Invalid key or HWID length") end
@@ -85,7 +150,6 @@ local runChecks = function()
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/milo22-ux/Ez.exe/refs/heads/main/Whitelist", true))()
     end)
-end
+end)()
 
-runChecks()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/milo22-ux/Custom-print/refs/heads/main/Verison%201.3",true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/milo22-ux/Custom-print/refs/heads/main/Verison%201.3", true))()
