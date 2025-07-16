@@ -40,11 +40,6 @@ if (t1 - t0) > 0.5 then
     error("Execution slowdown detected")
 end
 
-local success, mt = pcall(getrawmetatable, game)
-if success and mt then
-    error("Metatable access detected")
-end
-
 local key = getgenv().key or ""
 local hwid = gethwid()
 
