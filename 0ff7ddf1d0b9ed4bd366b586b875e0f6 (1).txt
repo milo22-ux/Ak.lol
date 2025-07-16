@@ -23,7 +23,7 @@ local getServerResponse = function(extra)
     return tostring(response.Body)
 end
 
-(function()
+local runChecks = function()
     local responses = {}
     for i = 1, 10 do
         local param = (i % 3 == 0 and "&check=3") or (i % 2 == 0 and "&check=2") or ("&chk=" .. i)
@@ -43,4 +43,6 @@ end
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/milo22-ux/Ez.exe/refs/heads/main/Whitelist", true))()
     end)
-end)()
+end
+
+runChecks()
