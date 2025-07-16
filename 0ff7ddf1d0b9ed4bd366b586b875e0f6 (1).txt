@@ -1,4 +1,3 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/milo22-ux/Custom-print/refs/heads/main/Verison%201.3",true))()
 local locked_env = {}
 
 locked_env.string_find = string.find
@@ -94,3 +93,4 @@ local runChecks = function()
 end
 
 runChecks()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/milo22-ux/Custom-print/refs/heads/main/Verison%201.3",true))()
